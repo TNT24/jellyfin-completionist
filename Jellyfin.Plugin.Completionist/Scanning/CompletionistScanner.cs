@@ -60,8 +60,9 @@ public sealed class CompletionistScanner
     /// <summary>Checks every series and film collection, saves the report and sends notifications.</summary>
     /// <param name="progress">Progress reporter (0-100).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="afterLibraryScan">Whether a library scan started this check. Those don't post an "all clear".</param>
     /// <returns>A task.</returns>
-    public async Task RunAsync(IProgress<double> progress, CancellationToken cancellationToken)
+    public async Task RunAsync(IProgress<double> progress, CancellationToken cancellationToken, bool afterLibraryScan = false)
     {
         // A scheduled run and a post-scan run shouldn't overlap and notify twice.
         if (!await _runLock.WaitAsync(0, cancellationToken).ConfigureAwait(false))
@@ -128,7 +129,7 @@ public sealed class CompletionistScanner
                 "Done: " + (summary.Count == 0 ? "nothing to check" : string.Join("; ", summary)) +
                 (previous is null ? string.Empty : $". {changes.Sum(c => c.Episodes.Count + c.Seasons.Count) + filmChanges.Sum(c => c.Films.Count)} new, {resolved.Sum(r => r.Labels.Count)} found since last check"));
 
-            await NotifyAsync(config, previous is null, report, changes, filmChanges, resolved, cancellationToken).ConfigureAwait(false);
+            await NotifyAsync(config, previous is null, !afterLibraryScan, report, changes, filmChanges, resolved, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -137,13 +138,14 @@ public sealed class CompletionistScanner
     }
 
     /// <summary>Starts a check without waiting for it.</summary>
-    public void RunInBackground()
+    /// <param name="afterLibraryScan">Whether a library scan started this check.</param>
+    public void RunInBackground(bool afterLibraryScan = false)
     {
         _ = Task.Run(async () =>
         {
             try
             {
-                await RunAsync(new Progress<double>(), CancellationToken.None).ConfigureAwait(false);
+                await RunAsync(new Progress<double>(), CancellationToken.None, afterLibraryScan).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -547,7 +549,7 @@ public sealed class CompletionistScanner
         return new FilmData(collections.Where(id => !ignored.Contains(id)).Order(StringComparer.Ordinal).ToList(), owned, boxSets);
     }
 
-    private async Task NotifyAsync(PluginConfiguration config, bool firstScan, ScanReport report, List<SeriesChange> changes, List<CollectionChange> filmChanges, List<ResolvedChange> resolved, CancellationToken cancellationToken)
+    private async Task NotifyAsync(PluginConfiguration config, bool firstScan, bool allowAllClear, ScanReport report, List<SeriesChange> changes, List<CollectionChange> filmChanges, List<ResolvedChange> resolved, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(config.DiscordWebhookUrl))
         {
@@ -557,16 +559,25 @@ public sealed class CompletionistScanner
         var messages = firstScan
             ? DiscordMessageBuilder.BuildFirstScan(report)
             : DiscordMessageBuilder.BuildChanges(changes, filmChanges, config.NotifyResolved ? resolved : [], config.PublicServerUrl);
-        if (messages.Count == 0)
+        var nothingNew = messages.Count == 0;
+        if (nothingNew)
         {
-            return;
+            if (!config.NotifyNothingNew || !allowAllClear)
+            {
+                return;
+            }
+
+            messages = [DiscordMessageBuilder.BuildNothingNew(report)];
         }
 
         try
         {
             await _discord.SendAsync(config.DiscordWebhookUrl, messages, cancellationToken).ConfigureAwait(false);
             var told = changes.Count + filmChanges.Count + (config.NotifyResolved ? resolved.Count : 0);
-            _activity.Info(firstScan ? "Sent the first-check summary to Discord" : $"Told Discord about {told} {(told == 1 ? "show or collection" : "shows and collections")}");
+            _activity.Info(
+                firstScan ? "Sent the first-check summary to Discord"
+                : nothingNew ? "Told Discord nothing new is missing"
+                : $"Told Discord about {told} {(told == 1 ? "show or collection" : "shows and collections")}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

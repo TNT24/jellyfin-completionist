@@ -144,6 +144,26 @@ public static class DiscordMessageBuilder
         return Pack(headline, embeds);
     }
 
+    /// <summary>Builds the "all clear" message for a check that found nothing new missing.</summary>
+    /// <param name="report">The report from the check.</param>
+    /// <returns>Webhook payload.</returns>
+    public static JsonObject BuildNothingNew(ScanReport report)
+    {
+        var missing = new List<string>();
+        AddCount(missing, report.Series.Sum(s => s.Episodes.Count), "episode", "episodes");
+        AddCount(missing, report.Series.Sum(s => s.Seasons.Count), "season", "seasons");
+        AddCount(missing, report.Collections.Sum(c => c.Films.Count), "film", "films");
+        var checkedItems = new List<string>();
+        AddCount(checkedItems, report.SeriesChecked, "show", "shows");
+        AddCount(checkedItems, report.CollectionsChecked, "collection", "collections");
+
+        return Message(
+            "👍 **Nothing new missing.** " +
+            (checkedItems.Count == 0 ? string.Empty : $"Checked {JoinAnd(checkedItems)}. ") +
+            (missing.Count == 0 ? "Your library is complete." : $"Still missing from before: {JoinAnd(missing)}."),
+            []);
+    }
+
     /// <summary>Builds a test message.</summary>
     /// <returns>Webhook payload.</returns>
     public static JsonObject BuildTest()

@@ -207,6 +207,20 @@ public class DiscordMessageTests
     }
 
     [Fact]
+    public void AllClearSaysWhatIsStillMissing()
+    {
+        var report = new ScanReport { SeriesChecked = 12, Series = [Change("Show", 3).Series] };
+        report.Series[0].Episodes.AddRange(Change("Show", 3).Episodes);
+
+        var content = DiscordMessageBuilder.BuildNothingNew(report)["content"]!.GetValue<string>();
+
+        Assert.Contains("Nothing new missing", content);
+        Assert.Contains("Checked 12 shows", content);
+        Assert.Contains("Still missing from before: 3 episodes", content);
+        Assert.Contains("Your library is complete", DiscordMessageBuilder.BuildNothingNew(new ScanReport { SeriesChecked = 1 })["content"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void ShortListsNameEachEpisode()
     {
         var msg = DiscordMessageBuilder.BuildChanges([Change("Show", 2)], [], [], string.Empty).Single();

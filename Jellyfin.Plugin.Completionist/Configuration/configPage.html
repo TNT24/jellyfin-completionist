@@ -141,6 +141,13 @@
                             </label>
                             <div class="fieldDescription checkboxFieldDescription">A short "now in your library" note when you fill a gap.</div>
                         </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="NotifyNothingNew" type="checkbox" is="emby-checkbox" />
+                                <span>Also post when a check finds nothing new</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">An "all clear" after the daily check and Check now, with how much is still missing. Checks after a library scan stay quiet.</div>
+                        </div>
                         <div class="inputContainer">
                             <label class="inputLabel inputLabelUnfocused" for="PublicServerUrl">Public server address (optional)</label>
                             <input id="PublicServerUrl" type="url" is="emby-input" autocomplete="off" placeholder="https://jellyfin.example.com" />
@@ -247,7 +254,7 @@
                 var pluginId = 'aceeaf3d-1c56-410f-af3b-0f4f8fa40746';
                 var page = document.querySelector('#CompletionistConfigPage');
                 var textFields = ['DiscordWebhookUrl', 'PublicServerUrl', 'TmdbApiKey', 'GraceDays', 'FilmGraceDays'];
-                var boolFields = ['NotifyResolved', 'CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
+                var boolFields = ['NotifyResolved', 'NotifyNothingNew', 'CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
                 var NEW_DAYS = 7;
                 var report = null;
                 var config = null;

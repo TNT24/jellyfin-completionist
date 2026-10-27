@@ -6,8 +6,8 @@ $ErrorActionPreference = 'Stop'
 
 # Each Jellyfin line gets its own last version number (.12 / .11). A Jellyfin 12 server can also
 # install 10.11 builds, so equal version numbers would leave it to pick between the two builds.
-$baseVersion = '1.0.0'
-$changelog = 'First release: finds missing TV seasons and episodes (TVmaze or TMDb) and missing films from your collections (TMDb), and posts new ones to Discord.'
+$baseVersion = '1.1.0'
+$changelog = 'New option: post an "all clear" to Discord when the daily check or Check now finds nothing new missing.'
 $repo = 'TNT24/jellyfin-completionist'
 $project = Join-Path $PSScriptRoot 'Jellyfin.Plugin.Completionist'
 $tests = Join-Path $PSScriptRoot 'tests\Jellyfin.Plugin.Completionist.Tests'

@@ -23,6 +23,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets a value indicating whether Discord is also told when missing episodes or films turn up.</summary>
     public bool NotifyResolved { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether Discord is told when a check finds nothing new missing.</summary>
+    public bool NotifyNothingNew { get; set; }
+
     /// <summary>
     /// Gets or sets the address Discord can reach the server on (e.g. https://jellyfin.example.com).
     /// When set, notifications link to the show and include its poster. Empty leaves both out.

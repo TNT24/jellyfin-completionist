@@ -32,7 +32,7 @@ public class LibraryScanHook : ILibraryPostScanTask
         }
 
         // Run in the background so the first check over a big library doesn't hold up the scan.
-        _scanner.RunInBackground();
+        _scanner.RunInBackground(afterLibraryScan: true);
         return Task.CompletedTask;
     }
 }

@@ -97,6 +97,7 @@ Download the zip for your server version from the [latest release](https://githu
 | Wait this many days after a film's release | 90 | TMDb's date is usually the cinema release. |
 | TMDb API key | (empty) | Needed for films, optional for TV. |
 | Also post when missing items turn up | Off | |
+| Also post when a check finds nothing new | Off | An "all clear" after the daily check and **Check now**, with how much is still missing. Not after library scans. |
 | Public server address | (empty) | Adds links and posters to Discord messages. |
 | Libraries | All TV and movie libraries | |
 | Check after each library scan | On | |
