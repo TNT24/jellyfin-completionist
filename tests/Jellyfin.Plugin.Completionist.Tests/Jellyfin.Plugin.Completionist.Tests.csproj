@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same switch as the plugin: -p:JellyfinTarget=10.11 tests the 10.11 build (default: 12). -->
+    <JellyfinTarget Condition="'$(JellyfinTarget)' == ''">12</JellyfinTarget>
+    <TargetFramework Condition="'$(JellyfinTarget)' == '12'">net10.0</TargetFramework>
+    <TargetFramework Condition="'$(JellyfinTarget)' == '10.11'">net9.0</TargetFramework>
+    <JellyfinPackageVersion Condition="'$(JellyfinTarget)' == '12'">12.0.0</JellyfinPackageVersion>
+    <JellyfinPackageVersion Condition="'$(JellyfinTarget)' == '10.11'">10.11.0</JellyfinPackageVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Lets the 10.11 (net9.0) tests run on a machine that only has the .NET 10 runtime. -->
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinPackageVersion)" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Jellyfin.Plugin.Completionist\Jellyfin.Plugin.Completionist.csproj" />
+  </ItemGroup>
+
+</Project>

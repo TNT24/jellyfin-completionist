@@ -1,0 +1,16 @@
+---
+name: "Completionist"
+guid: "aceeaf3d-1c56-410f-af3b-0f4f8fa40746"
+version: "1.0.0.12"
+targetAbi: "12.0.0.0"
+framework: "net10.0"
+overview: "Find missing episodes, seasons and collection films, with Discord notifications"
+description: >
+  Lists aired TV seasons and episodes, and released films from your collections, that are
+  missing from your library, and posts new ones to Discord.
+category: "General"
+owner: "TNT24"
+artifacts:
+- "Jellyfin.Plugin.Completionist.dll"
+changelog: "First release: finds missing TV seasons and episodes (TVmaze or TMDb) and missing films from your collections (TMDb), and posts new ones to Discord."
+imagePath: "assets\/logo.png"

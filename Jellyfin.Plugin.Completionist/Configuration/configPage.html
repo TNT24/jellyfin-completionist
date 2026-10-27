@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Completionist</title>
+</head>
+<body>
+    <div id="CompletionistConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <style>
+            #CompletionistConfigPage .cp-header { display: flex; align-items: center; gap: 1.2em; margin: 1em 0 1.5em; }
+            #CompletionistConfigPage .cp-logo { width: 192px; aspect-ratio: 16 / 9; border-radius: 10px; object-fit: cover; box-shadow: 0 4px 18px rgba(0,0,0,.35); }
+            #CompletionistConfigPage .cp-header h1 { margin: 0 0 .2em; }
+            #CompletionistConfigPage .cp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5em, 1fr)); gap: .8em; margin: .5em 0 1em; }
+            #CompletionistConfigPage .cp-stat { padding: .8em 1em; border-radius: 8px; background: rgba(255,255,255,.05); }
+            #CompletionistConfigPage .cp-stat b { display: block; font-size: 1.8em; line-height: 1.2; }
+            #CompletionistConfigPage .cp-stat span { opacity: .7; font-size: .9em; }
+            #CompletionistConfigPage .cp-stat-new b { color: #f5a623; }
+            #CompletionistConfigPage .cp-status { padding: .8em 1em; border-radius: 8px; background: rgba(255,255,255,.05); margin: .5em 0 1em; line-height: 1.6; }
+            #CompletionistConfigPage .cp-ok { color: #6fcf73; }
+            #CompletionistConfigPage .cp-warn { color: #ffb74d; }
+            #CompletionistConfigPage .cp-bad { color: #ef5350; }
+            #CompletionistConfigPage .cp-buttons { display: flex; flex-wrap: wrap; gap: .6em; margin-top: .8em; align-items: center; }
+            #CompletionistConfigPage .cp-buttons button { margin: 0; }
+            #CompletionistConfigPage .cp-tabs { display: flex; gap: .4em; margin: 1.5em 0 .5em; border-bottom: 1px solid rgba(255,255,255,.1); }
+            #CompletionistConfigPage .cp-tab { background: none; border: none; color: inherit; font: inherit; padding: .6em 1em; cursor: pointer; opacity: .65; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+            #CompletionistConfigPage .cp-tab.cp-active { opacity: 1; border-bottom-color: #00a4dc; font-weight: 600; }
+            #CompletionistConfigPage .cp-filters { display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-end; margin: 1em 0 .5em; }
+            #CompletionistConfigPage .cp-filters .inputContainer, #CompletionistConfigPage .cp-filters .selectContainer { margin: 0; flex: 1 1 14em; }
+            #CompletionistConfigPage .cp-filters .checkboxContainer { margin: 0 0 .4em; }
+            #CompletionistConfigPage .cp-item { border-radius: 8px; background: rgba(255,255,255,.04); margin: .5em 0; }
+            #CompletionistConfigPage .cp-item > summary { cursor: pointer; padding: .8em 1em; display: flex; flex-wrap: wrap; align-items: center; gap: .3em .8em; list-style: none; }
+            #CompletionistConfigPage .cp-item > summary::-webkit-details-marker { display: none; }
+            #CompletionistConfigPage .cp-item > summary::before { content: '▸'; opacity: .6; transition: transform .15s; }
+            #CompletionistConfigPage .cp-item[open] > summary::before { transform: rotate(90deg); }
+            #CompletionistConfigPage .cp-item-name { font-weight: 600; }
+            #CompletionistConfigPage .cp-item-summary { opacity: .7; font-size: .9em; }
+            #CompletionistConfigPage .cp-item-body { padding: 0 1em 1em 2.2em; }
+            #CompletionistConfigPage .cp-tag { display: inline-block; font-size: .75em; font-weight: 700; padding: .12em .5em; border-radius: 4px; letter-spacing: .03em; }
+            #CompletionistConfigPage .cp-tag-new { background: #f5a623; color: #1a1340; }
+            #CompletionistConfigPage .cp-tag-src { background: rgba(255,255,255,.1); font-weight: 600; }
+            #CompletionistConfigPage .cp-tag-gaps { background: #5c4a8a; }
+            #CompletionistConfigPage .cp-season { margin: .8em 0 .3em; font-weight: 600; }
+            #CompletionistConfigPage .cp-row { display: flex; gap: .8em; align-items: center; padding: .25em 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .95em; }
+            #CompletionistConfigPage .cp-row-code { flex: none; font-family: monospace; opacity: .85; min-width: 6.5em; }
+            #CompletionistConfigPage .cp-row-title { flex: 1; overflow-wrap: anywhere; }
+            #CompletionistConfigPage .cp-row-date { flex: none; opacity: .6; white-space: nowrap; }
+            #CompletionistConfigPage .cp-row-btn { flex: none; background: none; border: 1px solid rgba(255,255,255,.2); color: inherit; border-radius: 4px; padding: .1em .6em; font-size: .8em; cursor: pointer; opacity: .7; }
+            #CompletionistConfigPage .cp-row-btn:hover { opacity: 1; }
+            #CompletionistConfigPage .cp-note { font-size: .85em; color: #ffb74d; margin-top: .5em; }
+            #CompletionistConfigPage .cp-link { color: inherit; opacity: .8; font-size: .85em; }
+            #CompletionistConfigPage .cp-problem { padding: .4em 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+            #CompletionistConfigPage .cp-log { max-height: 24em; overflow-y: auto; margin-top: 1em; font-size: .9em; line-height: 1.5; }
+            #CompletionistConfigPage .cp-log-row { display: flex; gap: .8em; padding: .3em 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+            #CompletionistConfigPage .cp-log-time { flex: none; opacity: .6; white-space: nowrap; }
+            #CompletionistConfigPage .cp-log-msg { overflow-wrap: anywhere; }
+            #CompletionistConfigPage .cp-log-Warning .cp-log-msg { color: #ffb74d; }
+            #CompletionistConfigPage .cp-log-Error .cp-log-msg { color: #ef5350; }
+            #CompletionistConfigPage .cp-empty { padding: 1.5em 1em; text-align: center; opacity: .7; }
+            @media (max-width: 600px) {
+                #CompletionistConfigPage .cp-header { flex-direction: column; align-items: flex-start; }
+                #CompletionistConfigPage .cp-log-row { flex-direction: column; gap: 0; }
+                #CompletionistConfigPage .cp-row { flex-wrap: wrap; }
+                #CompletionistConfigPage .cp-item-body { padding-left: 1em; }
+            }
+        </style>
+        <div data-role="content">
+            <div class="content-primary">
+                <div class="cp-header">
+                    <img id="CpLogo" class="cp-logo" alt="" hidden />
+                    <div>
+                        <h1>Completionist</h1>
+                        <div class="fieldDescription">Lists the TV seasons and episodes that have aired, and the films from your collections that have been released, but aren't in your library. New ones are posted to Discord.</div>
+                    </div>
+                </div>
+
+                <div class="verticalSection">
+                    <h2 class="sectionTitle">What's missing</h2>
+                    <div id="CpStats" class="cp-stats"></div>
+                    <div id="CpLastRun" class="fieldDescription"></div>
+                    <div class="cp-buttons">
+                        <button is="emby-button" type="button" id="CpRun" class="raised button-submit emby-button"><span>Check now</span></button>
+                        <button is="emby-button" type="button" id="CpRefresh" class="raised emby-button"><span>Refresh</span></button>
+                    </div>
+
+                    <div class="cp-tabs" role="tablist">
+                        <button type="button" class="cp-tab cp-active" data-tab="shows" role="tab">TV shows <span id="CpShowsCount"></span></button>
+                        <button type="button" class="cp-tab" data-tab="films" role="tab">Films <span id="CpFilmsCount"></span></button>
+                    </div>
+
+                    <div class="cp-filters">
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="CpFilter">Search</label>
+                            <input id="CpFilter" type="search" is="emby-input" autocomplete="off" />
+                        </div>
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="CpSort">Sort by</label>
+                            <select is="emby-select" id="CpSort" class="emby-select-withcolor emby-select">
+                                <option value="new">Newest first</option>
+                                <option value="name">Name</option>
+                                <option value="count">Most missing</option>
+                            </select>
+                        </div>
+                        <div class="checkboxContainer">
+                            <label class="emby-checkbox-label">
+                                <input id="CpOnlyNew" type="checkbox" is="emby-checkbox" />
+                                <span>Only new</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="CpList"></div>
+
+                    <details id="CpProblemsBox" style="margin-top:1.5em" hidden>
+                        <summary class="sectionTitle" style="cursor:pointer;font-size:1.1em">Shows that couldn't be checked <span id="CpProblemCount"></span></summary>
+                        <div class="fieldDescription" style="margin:.5em 0">These shows couldn't be matched to an episode guide. Fixing their metadata (Identify, or Refresh metadata) usually sorts it out.</div>
+                        <div id="CpProblems"></div>
+                    </details>
+
+                    <details id="CpIgnoredBox" style="margin-top:1em" hidden>
+                        <summary class="sectionTitle" style="cursor:pointer;font-size:1.1em">Ignored <span id="CpIgnoredCount"></span></summary>
+                        <div id="CpIgnored" style="margin-top:.5em"></div>
+                    </details>
+                </div>
+
+                <form id="CompletionistConfigForm" style="margin-top:2.5em">
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">Discord notifications</h2>
+                        <div id="CpDiscordStatus" class="cp-status" hidden></div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="DiscordWebhookUrl">Webhook URL</label>
+                            <input id="DiscordWebhookUrl" type="url" is="emby-input" autocomplete="off" placeholder="https://discord.com/api/webhooks/…" />
+                            <div class="fieldDescription">In Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL. Leave blank to turn notifications off.</div>
+                        </div>
+                        <div class="fieldDescription" style="margin-bottom:1em">
+                            Discord only hears about <b>new</b> gaps: an episode that aired or a film that came out since the last check, or something that disappeared from your library.
+                            The first check sends a one-message summary instead of everything that's already missing.
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="NotifyResolved" type="checkbox" is="emby-checkbox" />
+                                <span>Also post when missing items turn up</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">A short "now in your library" note when you fill a gap.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="PublicServerUrl">Public server address (optional)</label>
+                            <input id="PublicServerUrl" type="url" is="emby-input" autocomplete="off" placeholder="https://jellyfin.example.com" />
+                            <div class="fieldDescription">If Jellyfin is reachable from the internet, notifications link to the show or collection and show its poster.</div>
+                        </div>
+                        <div class="cp-buttons">
+                            <button is="emby-button" type="button" id="CpTestDiscord" class="raised emby-button"><span>Send test message</span></button>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">TV shows</h2>
+                        <div class="checkboxContainer">
+                            <label class="emby-checkbox-label">
+                                <input id="CheckShows" type="checkbox" is="emby-checkbox" />
+                                <span>Check TV shows for missing seasons and episodes</span>
+                            </label>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="GraceDays">Wait this many days after an episode airs</label>
+                            <input id="GraceDays" type="number" min="0" max="60" is="emby-input" />
+                            <div class="fieldDescription">Gives downloads time to arrive before an episode is reported. 0 reports it as soon as it has aired.</div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="ReportWholeSeasons" type="checkbox" is="emby-checkbox" />
+                                <span>Report seasons I have none of</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Turn off if you only keep some seasons of a show on purpose. Gaps inside seasons you have are still reported.</div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="IncludeSpecials" type="checkbox" is="emby-checkbox" />
+                                <span>Include specials (season 0)</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Needs a TMDb key: TVmaze doesn't number specials, so they can't be matched.</div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="CheckGapsWithoutGuide" type="checkbox" is="emby-checkbox" />
+                                <span>Check unknown shows for gaps</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">For shows no episode guide knows, or whose numbering doesn't match (e.g. anime in absolute order): having episodes 1, 2 and 4 means 3 is missing.</div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">Film collections</h2>
+                        <div id="CpTmdbStatus" class="cp-status"></div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="CheckFilmCollections" type="checkbox" is="emby-checkbox" />
+                                <span>Check film collections for missing films</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Every franchise you own at least one film of (from TMDb, the same data Jellyfin's collections use), and every Jellyfin collection with a TMDb id.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="FilmGraceDays">Wait this many days after a film's release</label>
+                            <input id="FilmGraceDays" type="number" min="0" max="730" is="emby-input" />
+                            <div class="fieldDescription">TMDb's date is usually the cinema release. Films typically reach streaming and disc about 90 days later.</div>
+                        </div>
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="TmdbApiKey">TMDb API key or read access token</label>
+                            <input id="TmdbApiKey" type="text" is="emby-input" autocomplete="off" />
+                            <div class="fieldDescription">Free at themoviedb.org → Settings → API. <b>Needed for film collections.</b> For TV it's optional: with a key, TMDb is asked first, which matches the episode numbering Jellyfin's built-in metadata uses and covers specials. Without one, TVmaze is used.</div>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">Libraries</h2>
+                        <div class="fieldDescription">Pick the libraries to check. If none are ticked, every TV and movie library is checked.</div>
+                        <div id="LibraryList" style="margin-top:.5em"></div>
+                    </div>
+
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">When to check</h2>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="CheckOnLibraryScan" type="checkbox" is="emby-checkbox" />
+                                <span>Check after each library scan</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">Episode lists are cached for 12 hours (7 days for ended shows) and collections for 3 days, so this is quick. Full checks also run from the "Find missing episodes and films" scheduled task (daily at 5am by default, under Scheduled Tasks → Library).</div>
+                        </div>
+                    </div>
+
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Save</span></button>
+                </form>
+
+                <div class="verticalSection" style="margin-top:2em">
+                    <h2 class="sectionTitle">Log</h2>
+                    <div class="fieldDescription">What the plugin has done since Jellyfin last started. The full history is in Jellyfin's server log (Dashboard → Logs).</div>
+                    <div class="cp-buttons">
+                        <button is="emby-button" type="button" id="CpLogRefresh" class="raised emby-button"><span>Refresh</span></button>
+                        <button is="emby-button" type="button" id="CpLogClear" class="raised emby-button"><span>Clear</span></button>
+                        <button is="emby-button" type="button" id="CpReset" class="raised emby-button"><span>Start over</span></button>
+                    </div>
+                    <div class="fieldDescription" style="margin-top:.5em">Start over forgets the report and cached lists. The next check looks everything up again and sends a fresh summary to Discord.</div>
+                    <div id="LogList" class="cp-log"></div>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = 'aceeaf3d-1c56-410f-af3b-0f4f8fa40746';
+                var page = document.querySelector('#CompletionistConfigPage');
+                var textFields = ['DiscordWebhookUrl', 'PublicServerUrl', 'TmdbApiKey', 'GraceDays', 'FilmGraceDays'];
+                var boolFields = ['NotifyResolved', 'CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
+                var NEW_DAYS = 7;
+                var report = null;
+                var config = null;
+                var tab = 'shows';
+                var pollTimer = null;
+
+                function $(sel) { return page.querySelector(sel); }
+
+                function esc(s) {
+                    var d = document.createElement('div');
+                    d.textContent = s == null ? '' : String(s);
+                    return d.innerHTML;
+                }
+
+                function pad(n) { return (n < 10 ? '0' : '') + n; }
+                function code(s, e) { return 'S' + pad(s) + 'E' + pad(e); }
+                function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+                function seasonName(s) { return s === 0 ? 'Specials' : 'Season ' + s; }
+                function newTag(firstSeen) { return isNew(firstSeen) ? ' <span class="cp-tag cp-tag-new">NEW</span>' : ''; }
+
+                function post(path) {
+                    return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl(path), dataType: 'json' });
+                }
+
+                function postNoContent(path, query) {
+                    return ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl(path, query) });
+                }
+
+                // New = first seen after the very first check, within the last week.
+                function isNew(firstSeen) {
+                    if (!report || !firstSeen) { return false; }
+                    var t = new Date(firstSeen).getTime();
+                    return t > new Date(report.FirstScannedAt).getTime() && Date.now() - t < NEW_DAYS * 864e5;
+                }
+
+                function stamps(item) {
+                    return item.Films
+                        ? item.Films.map(function (f) { return f.FirstSeen; })
+                        : item.Seasons.map(function (s) { return s.FirstSeen; }).concat(item.Episodes.map(function (e) { return e.FirstSeen; }));
+                }
+
+                function hasNew(item) { return stamps(item).some(isNew); }
+                function newest(item) { return stamps(item).reduce(function (m, x) { return Math.max(m, new Date(x).getTime()); }, 0); }
+
+                function missingCount(item) {
+                    return item.Films
+                        ? item.Films.length
+                        : item.Episodes.length + item.Seasons.reduce(function (n, s) { return n + s.EpisodeCount; }, 0);
+                }
+
+                function showSummary(show) {
+                    var parts = [];
+                    if (show.Seasons.length) {
+                        parts.push((show.Seasons.length === 1 ? 'Season ' : 'Seasons ') + show.Seasons.map(function (s) { return s.Season; }).join(', '));
+                    }
+                    if (show.Episodes.length) {
+                        parts.push(plural(show.Episodes.length, 'episode', 'episodes'));
+                    }
+                    return parts.join(' + ');
+                }
+
+                function loadLogo() {
+                    ApiClient.getInstalledPlugins().then(function (plugins) {
+                        var me = plugins.filter(function (p) { return p.Id.replace(/-/g, '') === pluginId.replace(/-/g, ''); })[0];
+                        if (me && me.HasImage) {
+                            var img = $('#CpLogo');
+                            img.src = ApiClient.getUrl('Plugins/' + me.Id + '/' + me.Version + '/Image');
+                            img.hidden = false;
+                        }
+                    });
+                }
+
+                function renderStats(running) {
+                    if (!report) {
+                        $('#CpStats').innerHTML = '';
+                        $('#CpShowsCount').textContent = '';
+                        $('#CpFilmsCount').textContent = '';
+                        $('#CpLastRun').innerHTML = running
+                            ? '<span class="cp-ok">The first check is running…</span>'
+                            : 'No check has run yet. Press <b>Check now</b>.';
+                        return;
+                    }
+                    var episodes = 0, seasons = 0, films = 0, fresh = 0;
+                    report.Series.forEach(function (s) { episodes += s.Episodes.length; seasons += s.Seasons.length; });
+                    report.Collections.forEach(function (c) { films += c.Films.length; });
+                    report.Series.concat(report.Collections).forEach(function (i) { fresh += stamps(i).filter(isNew).length; });
+                    function stat(n, label, cls) { return '<div class="cp-stat ' + (cls || '') + '"><b>' + n + '</b><span>' + label + '</span></div>'; }
+                    $('#CpStats').innerHTML =
+                        stat(episodes, 'missing episodes') +
+                        stat(seasons, 'missing seasons') +
+                        stat(films, 'missing films') +
+                        stat(fresh, 'new this week', 'cp-stat-new');
+                    $('#CpShowsCount').textContent = '(' + report.Series.length + ')';
+                    $('#CpFilmsCount').textContent = '(' + report.Collections.length + ')';
+                    var checked = [plural(report.SeriesChecked, 'show', 'shows')];
+                    if (report.CollectionsChecked) { checked.push(plural(report.CollectionsChecked, 'film collection', 'film collections')); }
+                    $('#CpLastRun').innerHTML = 'Last checked ' + esc(new Date(report.ScannedAt).toLocaleString()) + ' · ' + checked.join(' and ') + ' checked' +
+                        (running ? ' · <span class="cp-ok">checking again now…</span>' : '');
+                }
+
+                function filtered(items) {
+                    var q = $('#CpFilter').value.trim().toLowerCase();
+                    var onlyNew = $('#CpOnlyNew').checked;
+                    var sort = $('#CpSort').value;
+                    return items
+                        .filter(function (i) { return (!q || i.Name.toLowerCase().indexOf(q) !== -1) && (!onlyNew || hasNew(i)); })
+                        .sort(function (a, b) {
+                            if (sort === 'count') { return missingCount(b) - missingCount(a); }
+                            if (sort === 'new') { return newest(b) - newest(a) || a.Name.localeCompare(b.Name); }
+                            return a.Name.localeCompare(b.Name);
+                        });
+                }
+
+                function renderShow(s) {
+                    var src = s.Source === 'Gaps'
+                        ? '<span class="cp-tag cp-tag-gaps" title="No episode guide; found from gaps in your numbering">gaps</span>'
+                        : '<span class="cp-tag cp-tag-src">' + esc(s.Source) + '</span>';
+                    var body = '';
+                    s.Seasons.forEach(function (x) {
+                        body += '<div class="cp-season">' + esc(seasonName(x.Season)) + ': all ' + plural(x.EpisodeCount, 'episode', 'episodes') + ' missing' + newTag(x.FirstSeen) + '</div>';
+                    });
+                    var bySeason = {};
+                    s.Episodes.forEach(function (e) { (bySeason[e.Season] = bySeason[e.Season] || []).push(e); });
+                    Object.keys(bySeason).map(Number).sort(function (a, b) { return a - b; }).forEach(function (season) {
+                        var eps = bySeason[season];
+                        body += '<div class="cp-season">' + esc(seasonName(season)) + ' · ' + eps.length + ' missing</div>';
+                        body += eps.map(function (e) {
+                            return '<div class="cp-row"><span class="cp-row-code">' + code(e.Season, e.Episode) + '</span>' +
+                                '<span class="cp-row-title">' + esc(e.Title || '') + newTag(e.FirstSeen) + '</span>' +
+                                '<span class="cp-row-date">' + (e.AirDate ? 'aired ' + esc(new Date(e.AirDate).toLocaleDateString()) : '') + '</span></div>';
+                        }).join('');
+                    });
+                    if (s.Note) { body += '<div class="cp-note">' + esc(s.Note) + '</div>'; }
+                    body += '<div class="cp-buttons">' +
+                        '<a class="cp-link" href="#/details?id=' + esc(s.SeriesId) + '">Open show</a>' +
+                        '<button is="emby-button" type="button" class="raised emby-button cp-ignore-show" data-id="' + esc(s.SeriesId) + '"><span>Ignore this show</span></button></div>';
+
+                    return '<details class="cp-item"><summary>' +
+                        '<span class="cp-item-name">' + esc(s.Name) + (s.Year ? ' (' + s.Year + ')' : '') + '</span>' +
+                        (hasNew(s) ? '<span class="cp-tag cp-tag-new">NEW</span>' : '') + src +
+                        '<span class="cp-item-summary">' + esc(showSummary(s)) + '</span>' +
+                        '</summary><div class="cp-item-body">' + body + '</div></details>';
+                }
+
+                function renderCollection(c) {
+                    var body = c.Films.map(function (f) {
+                        var year = f.ReleaseDate ? new Date(f.ReleaseDate).getFullYear() : '';
+                        return '<div class="cp-row"><span class="cp-row-code">' + esc(year) + '</span>' +
+                            '<span class="cp-row-title"><a class="cp-link" style="font-size:1em;opacity:1" target="_blank" rel="noopener" href="https://www.themoviedb.org/movie/' + esc(f.TmdbId) + '">' + esc(f.Title) + '</a>' + newTag(f.FirstSeen) + '</span>' +
+                            '<span class="cp-row-date">' + (f.ReleaseDate ? 'released ' + esc(new Date(f.ReleaseDate).toLocaleDateString()) : '') + '</span>' +
+                            '<button type="button" class="cp-row-btn cp-ignore-film" data-collection="' + esc(c.TmdbCollectionId) + '" data-id="' + esc(f.TmdbId) + '" data-name="' + esc(f.Title) + '">Ignore</button></div>';
+                    }).join('');
+                    if (c.Note) { body += '<div class="cp-note">' + esc(c.Note) + '</div>'; }
+                    body += '<div class="cp-buttons">' +
+                        (c.BoxSetId ? '<a class="cp-link" href="#/details?id=' + esc(c.BoxSetId) + '">Open collection</a>' : '') +
+                        '<a class="cp-link" target="_blank" rel="noopener" href="https://www.themoviedb.org/collection/' + esc(c.TmdbCollectionId) + '">TMDb</a>' +
+                        '<button is="emby-button" type="button" class="raised emby-button cp-ignore-collection" data-id="' + esc(c.TmdbCollectionId) + '" data-name="' + esc(c.Name) + '"><span>Ignore this collection</span></button></div>';
+
+                    return '<details class="cp-item"><summary>' +
+                        '<span class="cp-item-name">' + esc(c.Name) + '</span>' +
+                        (hasNew(c) ? '<span class="cp-tag cp-tag-new">NEW</span>' : '') +
+                        '<span class="cp-item-summary">You have ' + c.OwnedCount + ' of ' + c.ReleasedCount + ' · missing ' + plural(c.Films.length, 'film', 'films') + '</span>' +
+                        '</summary><div class="cp-item-body">' + body + '</div></details>';
+                }
+
+                function renderList() {
+                    var list = $('#CpList');
+                    page.querySelectorAll('.cp-tab').forEach(function (t) { t.classList.toggle('cp-active', t.getAttribute('data-tab') === tab); });
+                    $('#CpProblemsBox').hidden = tab !== 'shows' || !report || !report.Problems.length;
+                    if (!report) { list.innerHTML = ''; return; }
+
+                    var all = tab === 'shows' ? report.Series : report.Collections;
+                    var items = filtered(all);
+                    if (items.length) {
+                        list.innerHTML = items.map(tab === 'shows' ? renderShow : renderCollection).join('');
+                        return;
+                    }
+
+                    var empty;
+                    if (all.length) {
+                        empty = 'Nothing matches.';
+                    } else if (tab === 'shows') {
+                        empty = config && !config.CheckShows ? 'TV shows aren\'t being checked. Turn them on in the settings below.'
+                            : '🎉 Nothing missing. Every show is complete up to its latest aired episode.';
+                    } else {
+                        empty = config && !config.CheckFilmCollections ? 'Film collections aren\'t being checked. Turn them on in the settings below.'
+                            : config && !config.TmdbApiKey ? 'Film collections need a TMDb API key. Add one in the settings below, then press Check now.'
+                            : '🎉 Nothing missing. Every collection you\'ve started is complete.';
+                    }
+                    list.innerHTML = '<div class="cp-empty">' + empty + '</div>';
+                }
+
+                function renderProblems() {
+                    var problems = report ? report.Problems : [];
+                    $('#CpProblemCount').textContent = '(' + problems.length + ')';
+                    $('#CpProblems').innerHTML = problems.map(function (p) {
+                        return '<div class="cp-problem"><a class="cp-link" href="#/details?id=' + esc(p.SeriesId) + '"><b>' + esc(p.Name) + '</b></a>' +
+                            '<div class="fieldDescription">' + esc(p.Reason) + '</div></div>';
+                    }).join('');
+                }
+
+                function ignoredRow(label, kind, id) {
+                    return '<div class="cp-buttons" style="margin:.3em 0"><span style="flex:1">' + label + '</span>' +
+                        '<button is="emby-button" type="button" class="raised emby-button cp-unignore" data-kind="' + kind + '" data-id="' + esc(id) + '"><span>Stop ignoring</span></button></div>';
+                }
+
+                function renderIgnored() {
+                    var shows = config.IgnoredSeriesIds || [];
+                    var collections = config.IgnoredCollections || [];
+                    var films = config.IgnoredFilms || [];
+                    var count = shows.length + collections.length + films.length;
+                    $('#CpIgnoredBox').hidden = !count;
+                    $('#CpIgnoredCount').textContent = '(' + count + ')';
+                    var html = collections.map(function (c) { return ignoredRow('🎬 ' + esc(c.Name), 'Collection', c.Id); }).join('') +
+                        films.map(function (f) { return ignoredRow('🎞️ ' + esc(f.Name), 'Film', f.Id); }).join('');
+                    $('#CpIgnored').innerHTML = html;
+                    if (!shows.length) { return; }
+                    ApiClient.getJSON(ApiClient.getUrl('Items', { Ids: shows.join(','), Fields: 'ProductionYear' })).then(function (r) {
+                        var names = {};
+                        (r.Items || []).forEach(function (i) { names[i.Id.replace(/-/g, '')] = i.Name + (i.ProductionYear ? ' (' + i.ProductionYear + ')' : ''); });
+                        $('#CpIgnored').innerHTML = shows.map(function (id) {
+                            return ignoredRow('📺 ' + esc(names[id.replace(/-/g, '')] || 'Removed show'), 'Show', id);
+                        }).join('') + html;
+                    });
+                }
+
+                function loadReport() {
+                    return ApiClient.getJSON(ApiClient.getUrl('Completionist/Report')).then(function (r) {
+                        report = r.Report;
+                        if (report) { report.Collections = report.Collections || []; }
+                        renderStats(r.IsRunning);
+                        renderList();
+                        renderProblems();
+                        schedulePoll(r.IsRunning);
+                    }, function () {
+                        $('#CpLastRun').textContent = 'Could not load the report.';
+                    });
+                }
+
+                // While a check runs, refresh every few seconds so results appear without pressing Refresh.
+                function schedulePoll(running) {
+                    clearTimeout(pollTimer);
+                    if (running && document.body.contains(page)) {
+                        pollTimer = setTimeout(function () { loadReport(); loadLog(); }, 4000);
+                    }
+                }
+
+                function loadLog() {
+                    return ApiClient.getJSON(ApiClient.getUrl('Completionist/Log')).then(function (entries) {
+                        $('#LogList').innerHTML = entries.length === 0
+                            ? '<div class="fieldDescription">Nothing logged yet.</div>'
+                            : entries.map(function (e) {
+                                return '<div class="cp-log-row cp-log-' + esc(e.Level) + '">' +
+                                    '<span class="cp-log-time">' + esc(new Date(e.Time).toLocaleString()) + '</span>' +
+                                    '<span class="cp-log-msg">' + esc(e.Message) + '</span></div>';
+                            }).join('');
+                    }, function () {
+                        $('#LogList').innerHTML = '<div class="fieldDescription">Could not load the log.</div>';
+                    });
+                }
+
+                function loadLibraries(selected) {
+                    return ApiClient.getVirtualFolders().then(function (folders) {
+                        var html = folders
+                            .filter(function (f) { return !f.CollectionType || ['tvshows', 'movies', 'mixed'].indexOf(f.CollectionType) !== -1; })
+                            .map(function (f) {
+                                var checked = selected.indexOf(f.ItemId) !== -1 ? ' checked' : '';
+                                return '<div class="checkboxContainer"><label class="emby-checkbox-label">' +
+                                    '<input type="checkbox" is="emby-checkbox" class="libraryCheck" data-id="' + esc(f.ItemId) + '"' + checked + ' />' +
+                                    '<span>' + esc(f.Name) + '</span></label></div>';
+                            }).join('');
+                        $('#LibraryList').innerHTML = html || '<div class="fieldDescription">No TV or movie libraries found.</div>';
+                    });
+                }
+
+                function updateStatus() {
+                    var url = $('#DiscordWebhookUrl').value.trim();
+                    var box = $('#CpDiscordStatus');
+                    box.hidden = false;
+                    box.innerHTML = !url
+                        ? '<span class="cp-warn">! Discord notifications are off. Add a webhook URL to get told about new gaps.</span>'
+                        : /^https:\/\/(ptb\.|canary\.)?discord(app)?\.com\/api\/webhooks\//.test(url)
+                            ? '<span class="cp-ok">✓ Discord notifications are on.</span>'
+                            : '<span class="cp-bad">✗ That doesn\'t look like a Discord webhook URL. It should start with https://discord.com/api/webhooks/</span>';
+
+                    var tmdb = $('#TmdbApiKey').value.trim();
+                    $('#CpTmdbStatus').innerHTML = !$('#CheckFilmCollections').checked
+                        ? '<span class="cp-warn">! Film collections are turned off.</span>'
+                        : tmdb
+                            ? '<span class="cp-ok">✓ Film collections are checked with your TMDb key.</span>'
+                            : '<span class="cp-warn">! Add a TMDb API key below to check film collections.</span>';
+                }
+
+                function applyConfig(c) {
+                    config = c;
+                    textFields.forEach(function (k) { $('#' + k).value = c[k] == null ? '' : c[k]; });
+                    boolFields.forEach(function (k) { $('#' + k).checked = !!c[k]; });
+                    updateStatus();
+                    renderIgnored();
+                }
+
+                function reloadConfig() {
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+                        config = c;
+                        renderIgnored();
+                    });
+                }
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    loadLogo();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+                        applyConfig(c);
+                        return Promise.all([loadLibraries(c.LibraryIds || []), loadReport(), loadLog()]);
+                    }).finally(function () { Dashboard.hideLoadingMsg(); });
+                });
+
+                page.addEventListener('pagehide', function () { clearTimeout(pollTimer); });
+
+                // Start from the saved settings so ignore lists changed by the buttons above aren't overwritten.
+                function saveConfig() {
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+                        textFields.forEach(function (k) { c[k] = $('#' + k).value.trim(); });
+                        var grace = parseInt(c.GraceDays, 10);
+                        c.GraceDays = isNaN(grace) ? 2 : Math.max(0, grace);
+                        var filmGrace = parseInt(c.FilmGraceDays, 10);
+                        c.FilmGraceDays = isNaN(filmGrace) ? 90 : Math.max(0, filmGrace);
+                        boolFields.forEach(function (k) { c[k] = $('#' + k).checked; });
+                        c.LibraryIds = Array.prototype.map.call(page.querySelectorAll('.libraryCheck:checked'), function (el) { return el.getAttribute('data-id'); });
+                        config = c;
+                        return ApiClient.updatePluginConfiguration(pluginId, c);
+                    });
+                }
+
+                $('#CompletionistConfigForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    Dashboard.showLoadingMsg();
+                    saveConfig().then(function (result) {
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                        updateStatus();
+                        renderList();
+                    });
+                    return false;
+                });
+
+                ['DiscordWebhookUrl', 'TmdbApiKey'].forEach(function (id) { $('#' + id).addEventListener('input', updateStatus); });
+                $('#CheckFilmCollections').addEventListener('change', updateStatus);
+
+                // Test what's on the page, not what was last saved: save first.
+                $('#CpTestDiscord').addEventListener('click', function () {
+                    var box = $('#CpDiscordStatus');
+                    box.hidden = false;
+                    box.textContent = 'Saving and sending…';
+                    saveConfig().then(function () {
+                        return post('Completionist/TestDiscord');
+                    }).then(function (r) {
+                        box.innerHTML = '<span class="' + (r.Ok ? 'cp-ok">✓ ' : 'cp-bad">✗ ') + esc(r.Message) + '</span>';
+                    }, function () {
+                        box.innerHTML = '<span class="cp-bad">✗ Could not send the test message.</span>';
+                    });
+                });
+
+                $('#CpRun').addEventListener('click', function () {
+                    post('Completionist/Run').then(function (r) {
+                        Dashboard.alert(r.Message);
+                    }, function () {
+                        Dashboard.alert('Could not start the check. See the log below.');
+                    }).finally(function () {
+                        loadReport();
+                        loadLog();
+                    });
+                });
+
+                $('#CpRefresh').addEventListener('click', function () {
+                    loadReport();
+                    loadLog();
+                });
+
+                page.querySelectorAll('.cp-tab').forEach(function (t) {
+                    t.addEventListener('click', function () {
+                        tab = t.getAttribute('data-tab');
+                        renderList();
+                    });
+                });
+
+                ['input', 'change'].forEach(function (ev) {
+                    $('#CpFilter').addEventListener(ev, renderList);
+                });
+                $('#CpSort').addEventListener('change', renderList);
+                $('#CpOnlyNew').addEventListener('change', renderList);
+
+                $('#CpList').addEventListener('click', function (e) {
+                    var btn = e.target.closest('.cp-ignore-show, .cp-ignore-collection, .cp-ignore-film');
+                    if (!btn) { return; }
+                    var id = btn.getAttribute('data-id');
+                    var name = btn.getAttribute('data-name');
+                    var request = btn.classList.contains('cp-ignore-show') ? postNoContent('Completionist/Ignore/' + id)
+                        : btn.classList.contains('cp-ignore-collection') ? postNoContent('Completionist/IgnoreCollection/' + encodeURIComponent(id), { name: name })
+                        : postNoContent('Completionist/IgnoreFilm/' + encodeURIComponent(btn.getAttribute('data-collection')) + '/' + id, { name: name });
+                    request.then(function () {
+                        return Promise.all([reloadConfig(), loadReport()]);
+                    });
+                });
+
+                $('#CpIgnored').addEventListener('click', function (e) {
+                    var btn = e.target.closest('.cp-unignore');
+                    if (!btn) { return; }
+                    var kind = btn.getAttribute('data-kind');
+                    var id = btn.getAttribute('data-id');
+                    var request = kind === 'Show'
+                        ? postNoContent('Completionist/Unignore/' + id)
+                        : postNoContent('Completionist/UnignoreTmdb/' + kind + '/' + encodeURIComponent(id));
+                    request.then(function () {
+                        return reloadConfig();
+                    }).then(function () {
+                        Dashboard.alert('It will show up again after the next check.');
+                    });
+                });
+
+                $('#CpReset').addEventListener('click', function () {
+                    postNoContent('Completionist/Reset').finally(function () {
+                        loadReport();
+                        loadLog();
+                    });
+                });
+
+                $('#CpLogRefresh').addEventListener('click', loadLog);
+
+                $('#CpLogClear').addEventListener('click', function () {
+                    postNoContent('Completionist/Log/Clear').finally(loadLog);
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
