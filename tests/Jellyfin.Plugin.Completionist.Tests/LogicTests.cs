@@ -419,3 +419,98 @@ public class FilmTests
         Assert.Equal("📺 **1 new missing episode and 1 new missing film** in 1 show and 1 collection", msg["content"]!.GetValue<string>());
     }
 }
+
+public class WeeklySummaryTests
+{
+    private static readonly DateTime Now = new(2026, 11, 1, 9, 0, 0, DateTimeKind.Utc);
+
+    private static ScanReport Report() => new()
+    {
+        SeriesChecked = 40,
+        CollectionsChecked = 6,
+        Series =
+        [
+            new SeriesReport
+            {
+                SeriesId = Guid.NewGuid(),
+                Name = "Old Show",
+                Year = 2001,
+                Seasons = [new MissingSeason { Season = 3, EpisodeCount = 10, FirstSeen = Now.AddDays(-30) }],
+                Episodes = [new MissingEpisode { Season = 1, Episode = 2, FirstSeen = Now.AddDays(-30) }],
+            },
+            new SeriesReport
+            {
+                SeriesId = Guid.NewGuid(),
+                Name = "New Show",
+                Episodes = [new MissingEpisode { Season = 2, Episode = 5, FirstSeen = Now.AddDays(-2) }, new MissingEpisode { Season = 2, Episode = 6, FirstSeen = Now.AddDays(-1) }],
+            },
+        ],
+        Collections =
+        [
+            new CollectionReport { TmdbCollectionId = "1", Name = "Back to the Future Collection", OwnedCount = 2, ReleasedCount = 3, Films = [new MissingFilm { TmdbId = 2, Title = "Part II", FirstSeen = Now.AddDays(-3) }] },
+        ],
+        Filled =
+        [
+            new FilledEntry { Time = Now.AddDays(-1), Name = "Old Show", Items = 3, Seasons = 1 },
+            new FilledEntry { Time = Now.AddDays(-2), Name = "Shrek Collection", IsCollection = true, Items = 1 },
+            new FilledEntry { Time = Now.AddDays(-10), Name = "Too old", Items = 50 },
+        ],
+    };
+
+    private static string Description(JsonObject msg, int embed) => msg["embeds"]![embed]!["description"]!.GetValue<string>();
+
+    [Fact]
+    public void CountsTheWeek()
+    {
+        var msg = DiscordMessageBuilder.BuildWeeklySummary(Report(), Now, string.Empty);
+        var week = Description(msg, 0);
+        Assert.Contains("**Newly missing:** 2 episodes and 1 film", week);
+        Assert.Contains("**Turned up:** 3 episodes, 1 season and 1 film", week);
+        Assert.Contains("**Old Show** (4)", week);
+        Assert.DoesNotContain("Too old", week);
+        Assert.Equal("📊 **Completionist weekly summary** · 25 Oct – 1 Nov 2026", msg["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ListsWhatsStillMissing()
+    {
+        var msg = DiscordMessageBuilder.BuildWeeklySummary(Report(), Now, string.Empty);
+        var still = Description(msg, 1);
+        Assert.StartsWith("3 episodes, 1 season and 1 film.", still);
+        Assert.Contains("**Old Show (2001)**: Season 3, 1 episode", still);
+        Assert.Contains("**Back to the Future Collection**: 2 of 3, missing 1 film", still);
+        Assert.Equal("Checked 40 shows and 6 collections · full list in Dashboard → Completionist", msg["embeds"]![1]!["footer"]!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void QuietWeekAndCompleteLibrary()
+    {
+        var msg = DiscordMessageBuilder.BuildWeeklySummary(new ScanReport { SeriesChecked = 3 }, Now, string.Empty);
+        Assert.Contains("**Newly missing:** nothing", Description(msg, 0));
+        Assert.Contains("**Turned up:** nothing", Description(msg, 0));
+        Assert.Equal("Nothing. Your library is complete.", Description(msg, 1));
+    }
+
+    [Fact]
+    public void LinksWhenServerAddressIsSet()
+    {
+        var report = Report();
+        var id = report.Series[0].SeriesId;
+        var still = Description(DiscordMessageBuilder.BuildWeeklySummary(report, Now, "https://jf.example.com/"), 1);
+        Assert.Contains($"[**Old Show (2001)**](https://jf.example.com/web/#/details?id={id:N})", still);
+    }
+
+    [Fact]
+    public void FilledHistory_AddsThisCheckAndDropsOldEntries()
+    {
+        var history = new List<FilledEntry> { new() { Time = Now.AddDays(-9), Name = "Gone" }, new() { Time = Now.AddDays(-3), Name = "Kept" } };
+        var shows = new List<ResolvedChange> { new(Guid.NewGuid(), "Show", ["Season 2", "S01E04", "S01E05"]) };
+        var films = new List<ResolvedChange> { new(null, "Collection", ["A film"]) };
+
+        var kept = CompletionistScanner.KeepFilled(history, shows, films, Now);
+
+        Assert.Equal(["Kept", "Show", "Collection"], kept.Select(f => f.Name));
+        Assert.Equal((1, 2, false), (kept[1].Seasons, kept[1].Items, kept[1].IsCollection));
+        Assert.Equal((0, 1, true), (kept[2].Seasons, kept[2].Items, kept[2].IsCollection));
+    }
+}

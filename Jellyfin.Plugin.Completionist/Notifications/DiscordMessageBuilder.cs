@@ -164,6 +164,95 @@ public static class DiscordMessageBuilder
             []);
     }
 
+    /// <summary>Builds the weekly summary: what went missing and what turned up in the last 7 days, and what's still missing.</summary>
+    /// <param name="report">The latest report.</param>
+    /// <param name="now">Current time (UTC).</param>
+    /// <param name="publicServerUrl">Server address for links, or empty.</param>
+    /// <returns>Webhook payload.</returns>
+    public static JsonObject BuildWeeklySummary(ScanReport report, DateTime now, string publicServerUrl)
+    {
+        var baseUrl = publicServerUrl.Trim().TrimEnd('/');
+        var since = now.AddDays(-7);
+
+        var newParts = new List<string>();
+        AddCount(newParts, report.Series.Sum(s => s.Episodes.Count(e => e.FirstSeen > since)), "episode", "episodes");
+        AddCount(newParts, report.Series.Sum(s => s.Seasons.Count(x => x.FirstSeen > since)), "season", "seasons");
+        AddCount(newParts, report.Collections.Sum(c => c.Films.Count(f => f.FirstSeen > since)), "film", "films");
+
+        var filled = report.Filled.Where(f => f.Time > since).ToList();
+        var filledParts = new List<string>();
+        AddCount(filledParts, filled.Where(f => !f.IsCollection).Sum(f => f.Items), "episode", "episodes");
+        AddCount(filledParts, filled.Sum(f => f.Seasons), "season", "seasons");
+        AddCount(filledParts, filled.Where(f => f.IsCollection).Sum(f => f.Items), "film", "films");
+
+        var week = new StringBuilder()
+            .Append("📥 **Newly missing:** ").Append(newParts.Count == 0 ? "nothing" : JoinAnd(newParts)).Append('\n')
+            .Append("✅ **Turned up:** ").Append(filledParts.Count == 0 ? "nothing" : JoinAnd(filledParts));
+        var filledByName = filled
+            .GroupBy(f => (f.Name, f.IsCollection))
+            .Select(g => (g.Key.Name, g.First().ItemId, Count: g.Sum(f => f.Items + f.Seasons)))
+            .OrderByDescending(g => g.Count)
+            .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+        foreach (var f in filledByName)
+        {
+            week.Append("\n• ").Append(Link(f.Name, baseUrl, f.ItemId)).Append(" (").Append(f.Count.ToString(CultureInfo.InvariantCulture)).Append(')');
+        }
+
+        var embeds = new List<JsonObject> { Embed("This week", week.ToString(), ColorResolved, string.Empty, null, null) };
+
+        var stillParts = new List<string>();
+        AddCount(stillParts, report.Series.Sum(s => s.Episodes.Count), "episode", "episodes");
+        AddCount(stillParts, report.Series.Sum(s => s.Seasons.Count), "season", "seasons");
+        AddCount(stillParts, report.Collections.Sum(c => c.Films.Count), "film", "films");
+        var still = new StringBuilder(stillParts.Count == 0 ? "Nothing. Your library is complete." : JoinAnd(stillParts) + ".");
+        var topShows = report.Series
+            .OrderByDescending(s => s.Seasons.Sum(x => x.EpisodeCount) + s.Episodes.Count)
+            .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToList();
+        if (topShows.Count > 0)
+        {
+            still.Append("\n\n**Most incomplete shows**");
+            foreach (var s in topShows)
+            {
+                still.Append("\n• ").Append(Link(Title(s.Name, s.Year), baseUrl, s.SeriesId)).Append(": ").Append(Summary(s));
+            }
+        }
+
+        var topCollections = report.Collections
+            .OrderByDescending(c => c.Films.Count)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToList();
+        if (topCollections.Count > 0)
+        {
+            still.Append("\n\n**Most incomplete collections**");
+            foreach (var c in topCollections)
+            {
+                still.Append("\n• ").Append(Link(c.Name, baseUrl, c.BoxSetId))
+                    .Append(": ").Append(c.OwnedCount.ToString(CultureInfo.InvariantCulture)).Append(" of ").Append(c.ReleasedCount.ToString(CultureInfo.InvariantCulture))
+                    .Append(", missing ").Append(Plural(c.Films.Count, "film", "films"));
+            }
+        }
+
+        var checkedItems = new List<string>();
+        AddCount(checkedItems, report.SeriesChecked, "show", "shows");
+        AddCount(checkedItems, report.CollectionsChecked, "collection", "collections");
+        embeds.Add(Embed(
+            "Still missing",
+            still.Length <= MaxDescription ? still.ToString() : still.ToString(0, MaxDescription) + "\n…",
+            ColorInfo,
+            string.Empty,
+            null,
+            checkedItems.Count == 0 ? null : "Checked " + JoinAnd(checkedItems) + " · full list in Dashboard → Completionist"));
+
+        var from = since.ToString("d MMM", CultureInfo.InvariantCulture);
+        var to = now.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
+        return Message($"📊 **Completionist weekly summary** · {from} – {to}", embeds);
+    }
+
     /// <summary>Builds a test message.</summary>
     /// <returns>Webhook payload.</returns>
     public static JsonObject BuildTest()
@@ -281,6 +370,11 @@ public static class DiscordMessageBuilder
         var text = string.Join('\n', lines);
         return text.Length <= MaxDescription ? text : text[..MaxDescription] + "\n…";
     }
+
+    private static string Link(string name, string baseUrl, Guid? itemId)
+        => baseUrl.Length > 0 && itemId is Guid g && g != Guid.Empty
+            ? $"[**{Escape(name).Replace("[", "\\[", StringComparison.Ordinal).Replace("]", "\\]", StringComparison.Ordinal)}**]({baseUrl}/web/#/details?id={g.ToString("N", CultureInfo.InvariantCulture)})"
+            : "**" + Escape(name) + "**";
 
     private static void AddCount(List<string> parts, int count, string one, string many)
     {

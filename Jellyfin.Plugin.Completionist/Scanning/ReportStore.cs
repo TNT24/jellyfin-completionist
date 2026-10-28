@@ -145,6 +145,31 @@ public sealed class ScanReport
 
     /// <summary>Gets or sets the film collections with something missing.</summary>
     public List<CollectionReport> Collections { get; set; } = [];
+
+    /// <summary>Gets or sets what turned up in recent checks, kept for the weekly summary.</summary>
+    public List<FilledEntry> Filled { get; set; } = [];
+}
+
+/// <summary>Missing items that turned up in one series or collection during one check.</summary>
+public sealed class FilledEntry
+{
+    /// <summary>Gets or sets when the check found them (UTC).</summary>
+    public DateTime Time { get; set; }
+
+    /// <summary>Gets or sets the Jellyfin series or collection, if there is one.</summary>
+    public Guid? ItemId { get; set; }
+
+    /// <summary>Gets or sets the series or collection name.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether this is a film collection rather than a series.</summary>
+    public bool IsCollection { get; set; }
+
+    /// <summary>Gets or sets how many whole seasons turned up.</summary>
+    public int Seasons { get; set; }
+
+    /// <summary>Gets or sets how many episodes (or, for a collection, films) turned up.</summary>
+    public int Items { get; set; }
 }
 
 /// <summary>

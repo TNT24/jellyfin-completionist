@@ -118,6 +118,27 @@ public class CompletionistController : ControllerBase
         }
     }
 
+    /// <summary>Sends the weekly summary now, even if it's switched off, so it can be previewed.</summary>
+    /// <param name="summary">Weekly summary sender.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Result of the send.</returns>
+    [HttpPost("SendWeeklySummary")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<object>> SendWeeklySummary([FromServices] WeeklySummary summary, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var skipped = await summary.SendAsync(true, cancellationToken).ConfigureAwait(false);
+            return skipped is null
+                ? new { Ok = true, Message = "Sent. Check your Discord channel." }
+                : new { Ok = false, Message = skipped };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new { Ok = false, ex.Message };
+        }
+    }
+
     /// <summary>Stops reporting a series.</summary>
     /// <param name="seriesId">The series.</param>
     /// <returns>No content.</returns>

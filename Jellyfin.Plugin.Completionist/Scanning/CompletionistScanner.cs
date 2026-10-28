@@ -105,14 +105,15 @@ public sealed class CompletionistScanner
 
             report.Series.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             report.Collections.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-            _store.Set(report);
-            progress.Report(100);
-
             var changes = previous is null ? [] : FindNew(report, now);
             var filmChanges = previous is null ? [] : FindNewFilms(report, now);
-            var resolved = previous is null
-                ? []
-                : FindResolved(previous, report, showsFresh).Concat(FindResolvedFilms(previous, report, filmsFresh)).ToList();
+            var resolvedShows = previous is null ? [] : FindResolved(previous, report, showsFresh);
+            var resolvedFilms = previous is null ? [] : FindResolvedFilms(previous, report, filmsFresh);
+            var resolved = resolvedShows.Concat(resolvedFilms).ToList();
+            report.Filled = KeepFilled(previous?.Filled ?? [], resolvedShows, resolvedFilms, now);
+
+            _store.Set(report);
+            progress.Report(100);
 
             var summary = new List<string>();
             if (shows is not null)
@@ -210,6 +211,30 @@ public sealed class CompletionistScanner
             .Select(c => new CollectionChange(c, c.Films.Where(f => f.FirstSeen == now).ToList()))
             .Where(c => c.Films.Count > 0)
             .ToList();
+
+    /// <summary>Adds what turned up in this check to the history, dropping entries older than the weekly summary needs.</summary>
+    /// <param name="history">The history so far.</param>
+    /// <param name="shows">Series where something turned up.</param>
+    /// <param name="films">Collections where a film turned up.</param>
+    /// <param name="now">This check's time.</param>
+    /// <returns>The new history.</returns>
+    internal static List<FilledEntry> KeepFilled(IEnumerable<FilledEntry> history, IEnumerable<ResolvedChange> shows, IEnumerable<ResolvedChange> films, DateTime now)
+    {
+        // A little over a week, so a summary that runs late still sees the whole week.
+        var kept = history.Where(f => f.Time > now.AddDays(-8)).ToList();
+        foreach (var s in shows)
+        {
+            var seasons = s.Labels.Count(l => l.StartsWith("Season ", StringComparison.Ordinal));
+            kept.Add(new FilledEntry { Time = now, ItemId = s.ItemId, Name = s.Name, Seasons = seasons, Items = s.Labels.Count - seasons });
+        }
+
+        foreach (var f in films)
+        {
+            kept.Add(new FilledEntry { Time = now, ItemId = f.ItemId, Name = f.Name, IsCollection = true, Items = f.Labels.Count });
+        }
+
+        return kept;
+    }
 
     /// <summary>Finds what was missing last time and isn't now, for series that were really checked this time.</summary>
     /// <param name="previous">Last check's report.</param>

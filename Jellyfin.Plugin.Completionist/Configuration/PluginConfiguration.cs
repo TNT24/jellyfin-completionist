@@ -27,6 +27,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool NotifyNothingNew { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a summary of the week is posted to Discord.
+    /// When it goes out is set on the "Send Completionist weekly summary" scheduled task (Sundays at 9am by default).
+    /// </summary>
+    public bool WeeklySummary { get; set; }
+
+    /// <summary>
     /// Gets or sets the address Discord can reach the server on (e.g. https://jellyfin.example.com).
     /// When set, notifications link to the show and include its poster. Empty leaves both out.
     /// </summary>

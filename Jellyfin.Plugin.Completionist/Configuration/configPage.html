@@ -148,6 +148,14 @@
                             </label>
                             <div class="fieldDescription checkboxFieldDescription">An "all clear" after the daily check and Check now, with how much is still missing. Checks after a library scan stay quiet.</div>
                         </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input id="WeeklySummary" type="checkbox" is="emby-checkbox" />
+                                <span>Post a weekly summary</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">What went missing and what turned up in the last 7 days, plus the most incomplete shows and collections.
+                                Sent on Sundays at 9am; change that on the "Send Completionist weekly summary" task under Dashboard → Scheduled Tasks.</div>
+                        </div>
                         <div class="inputContainer">
                             <label class="inputLabel inputLabelUnfocused" for="PublicServerUrl">Public server address (optional)</label>
                             <input id="PublicServerUrl" type="url" is="emby-input" autocomplete="off" placeholder="https://jellyfin.example.com" />
@@ -155,6 +163,7 @@
                         </div>
                         <div class="cp-buttons">
                             <button is="emby-button" type="button" id="CpTestDiscord" class="raised emby-button"><span>Send test message</span></button>
+                            <button is="emby-button" type="button" id="CpSendSummary" class="raised emby-button"><span>Send weekly summary now</span></button>
                         </div>
                     </div>
 
@@ -254,7 +263,7 @@
                 var pluginId = 'aceeaf3d-1c56-410f-af3b-0f4f8fa40746';
                 var page = document.querySelector('#CompletionistConfigPage');
                 var textFields = ['DiscordWebhookUrl', 'PublicServerUrl', 'TmdbApiKey', 'GraceDays', 'FilmGraceDays'];
-                var boolFields = ['NotifyResolved', 'NotifyNothingNew', 'CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
+                var boolFields = ['NotifyResolved', 'NotifyNothingNew', 'WeeklySummary','CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
                 var NEW_DAYS = 7;
                 var report = null;
                 var config = null;
@@ -614,6 +623,19 @@
                         box.innerHTML = '<span class="' + (r.Ok ? 'cp-ok">✓ ' : 'cp-bad">✗ ') + esc(r.Message) + '</span>';
                     }, function () {
                         box.innerHTML = '<span class="cp-bad">✗ Could not send the test message.</span>';
+                    });
+                });
+
+                $('#CpSendSummary').addEventListener('click', function () {
+                    var box = $('#CpDiscordStatus');
+                    box.hidden = false;
+                    box.textContent = 'Saving and sending…';
+                    saveConfig().then(function () {
+                        return post('Completionist/SendWeeklySummary');
+                    }).then(function (r) {
+                        box.innerHTML = '<span class="' + (r.Ok ? 'cp-ok">✓ ' : 'cp-bad">✗ ') + esc(r.Message) + '</span>';
+                    }, function () {
+                        box.innerHTML = '<span class="cp-bad">✗ Could not send the weekly summary.</span>';
                     });
                 });
 

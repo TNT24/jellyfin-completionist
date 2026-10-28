@@ -18,6 +18,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<GuideClient>();
         serviceCollection.AddSingleton<ReportStore>();
         serviceCollection.AddSingleton<DiscordNotifier>();
+        serviceCollection.AddSingleton<WeeklySummary>();
         serviceCollection.AddSingleton<CompletionistScanner>();
     }
 }

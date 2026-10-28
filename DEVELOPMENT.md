@@ -16,6 +16,7 @@ Notes for working on the Completionist plugin. For what it does and how to insta
 | `Notifications/DiscordMessageBuilder.cs` | Builds webhook payloads within Discord's limits. Unit tested. |
 | `Notifications/DiscordNotifier.cs` | Posts payloads; only accepts `https://discord.com/api/webhooks/…` URLs; honours `retry_after`. |
 | `ScheduledTasks/CompletionistTask.cs` | Daily at 5 AM, under Scheduled Tasks → Library. |
+| `ScheduledTasks/WeeklySummaryTask.cs` | Sundays at 9 AM. Sends the weekly summary through `Notifications/WeeklySummary.cs`, which does nothing unless `WeeklySummary` is on. The summary reads the saved report: `FirstSeen` dates give the week's new gaps, and `ScanReport.Filled` (what each check found turned up, kept for 8 days by `KeepFilled`) gives what was filled. |
 | `ScheduledTasks/LibraryScanHook.cs` | `ILibraryPostScanTask`; starts a background check after each library scan. |
 | `Api/CompletionistController.cs` | `/Completionist/*` endpoints for the page (admin only). |
 | `Configuration/configPage.html` | Report and settings page, embedded in the DLL. Uses the old `Dashboard`/`ApiClient` globals like the other plugins. |

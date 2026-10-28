@@ -43,6 +43,7 @@ Film collections use TMDb, the same data Jellyfin's own collections come from, s
 
 - **Its own page in the dashboard menu.** Totals, then **TV shows** and **Films** tabs with search, sorting, NEW tags, and **Ignore** buttons for a show, a collection or a single film.
 - **Discord tells you what's new.** Discord hears about an episode that aired or a film that came out since the last check, or something that disappeared from your library. It doesn't hear about the same old gaps every day. The first check sends a one-message summary instead of flooding the channel.
+- **Optional weekly summary** on Discord: what went missing and what turned up in the last 7 days, and the most incomplete shows and collections. Sundays at 9am by default.
 - **Optional "caught up" messages** when you fill a gap. If your server is reachable from the internet, messages link to the show or collection and show its poster; film messages otherwise link to TMDb.
 - **TV works with no key.** It uses [TVmaze](https://www.tvmaze.com/api) by default. With a TMDb key, TMDb is asked first, which matches Jellyfin's built-in episode numbering and includes specials.
 - **Runs by itself.** A daily scheduled task, a quick check after every library scan (lookups are cached), and a **Check now** button.
@@ -98,6 +99,7 @@ Download the zip for your server version from the [latest release](https://githu
 | TMDb API key | (empty) | Needed for films, optional for TV. |
 | Also post when missing items turn up | Off | |
 | Also post when a check finds nothing new | Off | An "all clear" after the daily check and **Check now**, with how much is still missing. Not after library scans. |
+| Post a weekly summary | Off | The week's new gaps and what turned up, plus what's still missing. Sent by the **Send Completionist weekly summary** scheduled task (Sundays at 9am; change it under Scheduled Tasks). **Send weekly summary now** previews it. |
 | Public server address | (empty) | Adds links and posters to Discord messages. |
 | Libraries | All TV and movie libraries | |
 | Check after each library scan | On | |
