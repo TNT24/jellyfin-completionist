@@ -9,6 +9,22 @@
         "imageUrl":  "https://raw.githubusercontent.com/TNT24/jellyfin-completionist/main/assets/logo.png",
         "versions":  [
                          {
+                             "version":  "1.2.1.12",
+                             "changelog":  "Clearer \"Still missing\" section in the weekly summary: episode counts per show, totals that include whole seasons, and how many more are not listed. The activity log now says when the weekly summary task skips because the summary is switched off.",
+                             "targetAbi":  "12.0.0.0",
+                             "sourceUrl":  "https://github.com/TNT24/jellyfin-completionist/releases/download/v1.2.1/Completionist_1.2.1.12_jellyfin-12.zip",
+                             "checksum":  "97d4820f36082a5c3f925607e27476f1",
+                             "timestamp":  "2026-11-03T19:22:18Z"
+                         },
+                         {
+                             "version":  "1.2.1.11",
+                             "changelog":  "Clearer \"Still missing\" section in the weekly summary: episode counts per show, totals that include whole seasons, and how many more are not listed. The activity log now says when the weekly summary task skips because the summary is switched off.",
+                             "targetAbi":  "10.11.0.0",
+                             "sourceUrl":  "https://github.com/TNT24/jellyfin-completionist/releases/download/v1.2.1/Completionist_1.2.1.11_jellyfin-10.11.zip",
+                             "checksum":  "836aa5b2fbc3d94dfca22d5fc5d7076a",
+                             "timestamp":  "2026-11-03T19:22:18Z"
+                         },
+                         {
                              "version":  "1.2.0.12",
                              "changelog":  "New option: a weekly summary on Discord with what went missing and what turned up in the last 7 days, and the most incomplete shows and collections.",
                              "targetAbi":  "12.0.0.0",
