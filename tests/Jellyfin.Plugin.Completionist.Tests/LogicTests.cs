@@ -476,10 +476,32 @@ public class WeeklySummaryTests
     {
         var msg = DiscordMessageBuilder.BuildWeeklySummary(Report(), Now, string.Empty);
         var still = Description(msg, 1);
-        Assert.StartsWith("3 episodes, 1 season and 1 film.", still);
-        Assert.Contains("**Old Show (2001)**: Season 3, 1 episode", still);
-        Assert.Contains("**Back to the Future Collection**: 2 of 3, missing 1 film", still);
+        Assert.StartsWith("13 episodes across 2 shows and 1 film across 1 collection.", still);
+        Assert.Contains("• **Old Show (2001)** — 11 episodes (Season 3 + 1 other)", still);
+        Assert.Contains("• **New Show** — 2 episodes", still);
+        Assert.Contains("• **Back to the Future Collection** — 1 film (you have 2 of 3)", still);
+        Assert.DoesNotContain("more show", still);
+        Assert.True(still.IndexOf("Old Show", StringComparison.Ordinal) < still.IndexOf("New Show", StringComparison.Ordinal));
         Assert.Equal("Checked 40 shows and 6 collections · full list in Dashboard → Completionist", msg["embeds"]![1]!["footer"]!["text"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void StillMissing_ShowsTopFiveAndCountsTheRest()
+    {
+        var report = new ScanReport
+        {
+            Series = Enumerable.Range(1, 7).Select(i => new SeriesReport
+            {
+                SeriesId = Guid.NewGuid(),
+                Name = "Show " + i,
+                Seasons = i == 1 ? new[] { 2, 3, 4, 5 }.Select(n => new MissingSeason { Season = n, EpisodeCount = 10 }).ToList() : [],
+                Episodes = Enumerable.Range(1, i).Select(e => new MissingEpisode { Season = 1, Episode = e }).ToList(),
+            }).ToList(),
+        };
+        var still = Description(DiscordMessageBuilder.BuildWeeklySummary(report, Now, string.Empty), 1);
+        Assert.Contains("• **Show 1** — 41 episodes (4 whole seasons + 1 other)", still);
+        Assert.Contains("\n…and 2 more shows", still);
+        Assert.DoesNotContain("Show 2**", still);
     }
 
     [Fact]

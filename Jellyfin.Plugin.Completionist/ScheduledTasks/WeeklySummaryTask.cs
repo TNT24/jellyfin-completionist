@@ -46,9 +46,10 @@ public class WeeklySummaryTask : IScheduledTask
         try
         {
             var skipped = await _summary.SendAsync(false, cancellationToken).ConfigureAwait(false);
-            if (skipped is not null && !skipped.Contains("switched off", StringComparison.Ordinal))
+            if (skipped is not null)
             {
-                _activity.Info("Weekly summary not sent: " + skipped);
+                _activity.Info("Weekly summary not sent: " + skipped
+                    + (skipped.Contains("switched off", StringComparison.Ordinal) ? " Tick \"Post a weekly summary\" in Completionist's settings and click Save." : string.Empty));
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

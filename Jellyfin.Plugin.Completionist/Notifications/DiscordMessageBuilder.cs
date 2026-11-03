@@ -202,39 +202,43 @@ public static class DiscordMessageBuilder
 
         var embeds = new List<JsonObject> { Embed("This week", week.ToString(), ColorResolved, string.Empty, null, null) };
 
+        var shows = report.Series.Where(s => MissingEpisodeCount(s) > 0).ToList();
+        var collections = report.Collections.Where(c => c.Films.Count > 0).ToList();
         var stillParts = new List<string>();
-        AddCount(stillParts, report.Series.Sum(s => s.Episodes.Count), "episode", "episodes");
-        AddCount(stillParts, report.Series.Sum(s => s.Seasons.Count), "season", "seasons");
-        AddCount(stillParts, report.Collections.Sum(c => c.Films.Count), "film", "films");
-        var still = new StringBuilder(stillParts.Count == 0 ? "Nothing. Your library is complete." : JoinAnd(stillParts) + ".");
-        var topShows = report.Series
-            .OrderByDescending(s => s.Seasons.Sum(x => x.EpisodeCount) + s.Episodes.Count)
-            .ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(5)
-            .ToList();
-        if (topShows.Count > 0)
+        if (shows.Count > 0)
         {
-            still.Append("\n\n**Most incomplete shows**");
-            foreach (var s in topShows)
-            {
-                still.Append("\n• ").Append(Link(Title(s.Name, s.Year), baseUrl, s.SeriesId)).Append(": ").Append(Summary(s));
-            }
+            stillParts.Add($"{Plural(shows.Sum(MissingEpisodeCount), "episode", "episodes")} across {Plural(shows.Count, "show", "shows")}");
         }
 
-        var topCollections = report.Collections
-            .OrderByDescending(c => c.Films.Count)
-            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-            .Take(5)
-            .ToList();
-        if (topCollections.Count > 0)
+        if (collections.Count > 0)
+        {
+            stillParts.Add($"{Plural(collections.Sum(c => c.Films.Count), "film", "films")} across {Plural(collections.Count, "collection", "collections")}");
+        }
+
+        var still = new StringBuilder(stillParts.Count == 0 ? "Nothing. Your library is complete." : JoinAnd(stillParts) + ".");
+        const int Top = 5;
+        if (shows.Count > 0)
+        {
+            still.Append("\n\n**Most incomplete shows**");
+            foreach (var s in shows.OrderByDescending(MissingEpisodeCount).ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase).Take(Top))
+            {
+                still.Append("\n• ").Append(Link(Title(s.Name, s.Year), baseUrl, s.SeriesId)).Append(" — ").Append(WeeklyShowLine(s));
+            }
+
+            AppendMore(still, shows.Count - Top, "show", "shows");
+        }
+
+        if (collections.Count > 0)
         {
             still.Append("\n\n**Most incomplete collections**");
-            foreach (var c in topCollections)
+            foreach (var c in collections.OrderByDescending(c => c.Films.Count).ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Take(Top))
             {
                 still.Append("\n• ").Append(Link(c.Name, baseUrl, c.BoxSetId))
-                    .Append(": ").Append(c.OwnedCount.ToString(CultureInfo.InvariantCulture)).Append(" of ").Append(c.ReleasedCount.ToString(CultureInfo.InvariantCulture))
-                    .Append(", missing ").Append(Plural(c.Films.Count, "film", "films"));
+                    .Append(" — ").Append(Plural(c.Films.Count, "film", "films"))
+                    .Append(" (you have ").Append(c.OwnedCount.ToString(CultureInfo.InvariantCulture)).Append(" of ").Append(c.ReleasedCount.ToString(CultureInfo.InvariantCulture)).Append(')');
             }
+
+            AppendMore(still, collections.Count - Top, "collection", "collections");
         }
 
         var checkedItems = new List<string>();
@@ -375,6 +379,33 @@ public static class DiscordMessageBuilder
         => baseUrl.Length > 0 && itemId is Guid g && g != Guid.Empty
             ? $"[**{Escape(name).Replace("[", "\\[", StringComparison.Ordinal).Replace("]", "\\]", StringComparison.Ordinal)}**]({baseUrl}/web/#/details?id={g.ToString("N", CultureInfo.InvariantCulture)})"
             : "**" + Escape(name) + "**";
+
+    /// <summary>Episodes a show is missing, counting every episode of a missing season.</summary>
+    private static int MissingEpisodeCount(SeriesReport s) => s.Seasons.Sum(x => x.EpisodeCount) + s.Episodes.Count;
+
+    /// <summary>One show in the weekly summary, e.g. "12 episodes (Season 3 + 2 others)".</summary>
+    private static string WeeklyShowLine(SeriesReport s)
+    {
+        var line = Plural(MissingEpisodeCount(s), "episode", "episodes");
+        if (s.Seasons.Count == 0)
+        {
+            return line;
+        }
+
+        var seasons = s.Seasons.Select(x => x.Season).OrderBy(n => n).ToList();
+        var which = seasons.Count == 1 ? $"Season {seasons[0]}"
+            : seasons.Count <= 3 ? "Seasons " + JoinAnd(seasons.Select(n => n.ToString(CultureInfo.InvariantCulture)).ToList())
+            : $"{seasons.Count} whole seasons";
+        return line + " (" + which + (s.Episodes.Count > 0 ? $" + {Plural(s.Episodes.Count, "other", "others")}" : string.Empty) + ")";
+    }
+
+    private static void AppendMore(StringBuilder sb, int more, string one, string many)
+    {
+        if (more > 0)
+        {
+            sb.Append("\n…and ").Append(Plural(more, "more " + one, "more " + many));
+        }
+    }
 
     private static void AddCount(List<string> parts, int count, string one, string many)
     {
