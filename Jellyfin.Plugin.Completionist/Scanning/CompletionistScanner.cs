@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -264,7 +265,7 @@ public sealed class CompletionistScanner
             labels.AddRange(episodes.Select(e => DiscordMessageBuilder.Code(e.Season, e.Episode)));
             if (labels.Count > 0)
             {
-                resolved.Add(new ResolvedChange(old.SeriesId, old.Name, labels));
+                resolved.Add(new ResolvedChange(old.SeriesId, old.Name, labels, Completed: now is null));
             }
         }
 
@@ -289,7 +290,7 @@ public sealed class CompletionistScanner
                 .ToList();
             if (found.Count > 0)
             {
-                resolved.Add(new ResolvedChange(now?.BoxSetId ?? old.BoxSetId, old.Name, found));
+                resolved.Add(new ResolvedChange(now?.BoxSetId ?? old.BoxSetId, old.Name, found, Completed: now is null, IsCollection: true));
             }
         }
 
@@ -581,10 +582,19 @@ public sealed class CompletionistScanner
             return;
         }
 
+        // Completed shows and collections get their own message with a poster instead of a line in the "caught up" list.
+        var completed = firstScan || !config.NotifyCompleted ? [] : resolved.Where(r => r.Completed).ToList();
+        var stillResolved = config.NotifyResolved ? resolved.Where(r => !completed.Contains(r)).ToList() : [];
         var messages = firstScan
             ? DiscordMessageBuilder.BuildFirstScan(report)
-            : DiscordMessageBuilder.BuildChanges(changes, filmChanges, config.NotifyResolved ? resolved : [], config.PublicServerUrl);
-        var nothingNew = messages.Count == 0;
+            : DiscordMessageBuilder.BuildChanges(changes, filmChanges, stillResolved, config.PublicServerUrl);
+        await SendCompletedAsync(config, completed, cancellationToken).ConfigureAwait(false);
+        var nothingNew = messages.Count == 0 && completed.Count == 0;
+        if (messages.Count == 0 && completed.Count > 0)
+        {
+            return;
+        }
+
         if (nothingNew)
         {
             if (!config.NotifyNothingNew || !allowAllClear)
@@ -598,7 +608,7 @@ public sealed class CompletionistScanner
         try
         {
             await _discord.SendAsync(config.DiscordWebhookUrl, messages, cancellationToken).ConfigureAwait(false);
-            var told = changes.Count + filmChanges.Count + (config.NotifyResolved ? resolved.Count : 0);
+            var told = changes.Count + filmChanges.Count + stillResolved.Count;
             _activity.Info(
                 firstScan ? "Sent the first-check summary to Discord"
                 : nothingNew ? "Told Discord nothing new is missing"
@@ -607,6 +617,55 @@ public sealed class CompletionistScanner
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _activity.Error("Couldn't post to Discord", ex);
+        }
+    }
+
+    /// <summary>Posts one message per completed show or collection, with its poster.</summary>
+    private async Task SendCompletedAsync(PluginConfiguration config, List<ResolvedChange> completed, CancellationToken cancellationToken)
+    {
+        var hasServerUrl = !string.IsNullOrWhiteSpace(config.PublicServerUrl);
+        foreach (var c in completed.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                // Without a public address Discord can't fetch the poster, so upload it from the server instead.
+                var poster = hasServerUrl ? null : FindPoster(c.ItemId);
+                if (poster is null)
+                {
+                    await _discord.SendAsync(config.DiscordWebhookUrl, [DiscordMessageBuilder.BuildCompleted(c, config.PublicServerUrl, null)], cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    var name = "poster" + Path.GetExtension(poster).ToLowerInvariant();
+                    var bytes = await File.ReadAllBytesAsync(poster, cancellationToken).ConfigureAwait(false);
+                    await _discord.SendWithImageAsync(config.DiscordWebhookUrl, DiscordMessageBuilder.BuildCompleted(c, string.Empty, name), bytes, name, cancellationToken).ConfigureAwait(false);
+                }
+
+                _activity.Info($"Told Discord {c.Name} is complete");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _activity.Error($"Couldn't post to Discord that {c.Name} is complete", ex);
+            }
+        }
+    }
+
+    /// <summary>The local poster file of a series or box set, if it has one small enough for Discord.</summary>
+    private string? FindPoster(Guid? itemId)
+    {
+        if (itemId is not Guid id || id == Guid.Empty)
+        {
+            return null;
+        }
+
+        try
+        {
+            var path = _libraryManager.GetItemById(id)?.GetImagePath(ImageType.Primary, 0);
+            return path is not null && File.Exists(path) && new FileInfo(path).Length < 8_000_000 ? path : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
         }
     }
 

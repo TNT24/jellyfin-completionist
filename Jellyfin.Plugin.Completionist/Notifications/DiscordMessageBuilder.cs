@@ -23,7 +23,9 @@ public sealed record CollectionChange(CollectionReport Collection, IReadOnlyList
 /// <param name="ItemId">The Jellyfin series or collection, if there is one.</param>
 /// <param name="Name">Series or collection name.</param>
 /// <param name="Labels">What turned up, e.g. "S02E05", "Season 3" or a film title.</param>
-public sealed record ResolvedChange(Guid? ItemId, string Name, IReadOnlyList<string> Labels);
+/// <param name="Completed">Whether nothing is missing from it any more.</param>
+/// <param name="IsCollection">Whether it's a film collection rather than a series.</param>
+public sealed record ResolvedChange(Guid? ItemId, string Name, IReadOnlyList<string> Labels, bool Completed = false, bool IsCollection = false);
 
 /// <summary>
 /// Turns check results into Discord webhook messages. No network access, so it can be unit tested.
@@ -41,6 +43,8 @@ public static class DiscordMessageBuilder
     private const int ColorFilm = 0xAA5CC3;
     private const int ColorResolved = 0x43B581;
     private const int ColorInfo = 0x00A4DC;
+    private const int ColorComplete = 0xFFD700;
+
 
     /// <summary>Builds the messages for new missing items, and resolved ones when given.</summary>
     /// <param name="changes">Series with something newly missing.</param>
@@ -255,6 +259,40 @@ public static class DiscordMessageBuilder
         var from = since.ToString("d MMM", CultureInfo.InvariantCulture);
         var to = now.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
         return Message($"📊 **Completionist weekly summary** · {from} – {to}", embeds);
+    }
+
+    /// <summary>Builds the celebration for a series or collection with nothing missing any more, with its poster as a large image.</summary>
+    /// <param name="completed">The series or collection.</param>
+    /// <param name="publicServerUrl">Server address, or empty. When set, Discord fetches the poster from it and the title links to the item.</param>
+    /// <param name="posterFile">Name the poster is uploaded under with the message, or null. Used when there's no server address.</param>
+    /// <returns>Webhook payload.</returns>
+    public static JsonObject BuildCompleted(ResolvedChange completed, string publicServerUrl, string? posterFile)
+    {
+        var baseUrl = publicServerUrl.Trim().TrimEnd('/');
+        var what = completed.IsCollection ? "every released film in this collection" : "every aired episode";
+        const int ListUpTo = 6;
+        var last = completed.Labels.Count <= ListUpTo
+            ? string.Join(", ", completed.Labels)
+            : string.Join(", ", completed.Labels.Take(ListUpTo)) + $" and {completed.Labels.Count - ListUpTo} more";
+        var embed = new JsonObject
+        {
+            ["title"] = "🏆 " + (completed.Name.Length > 230 ? completed.Name[..230] + "…" : completed.Name),
+            ["description"] = $"**Complete!** You now have {what}.\n\nLast to turn up: {Escape(last)}",
+            ["color"] = ColorComplete,
+        };
+
+        if (baseUrl.Length > 0 && completed.ItemId is Guid g && g != Guid.Empty)
+        {
+            var id = g.ToString("N", CultureInfo.InvariantCulture);
+            embed["url"] = $"{baseUrl}/web/#/details?id={id}";
+            embed["image"] = new JsonObject { ["url"] = $"{baseUrl}/Items/{id}/Images/Primary?maxHeight=600" };
+        }
+        else if (posterFile is not null)
+        {
+            embed["image"] = new JsonObject { ["url"] = "attachment://" + posterFile };
+        }
+
+        return Message($"🏆 **{Escape(completed.Name)}** is complete!", [embed]);
     }
 
     /// <summary>Builds a test message.</summary>

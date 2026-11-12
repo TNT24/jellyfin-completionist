@@ -6,8 +6,8 @@ $ErrorActionPreference = 'Stop'
 
 # Each Jellyfin line gets its own last version number (.12 / .11). A Jellyfin 12 server can also
 # install 10.11 builds, so equal version numbers would leave it to pick between the two builds.
-$baseVersion = '1.2.1'
-$changelog = 'Clearer "Still missing" section in the weekly summary: episode counts per show, totals that include whole seasons, and how many more are not listed. The activity log now says when the weekly summary task skips because the summary is switched off.'
+$baseVersion = '1.3.0'
+$changelog = 'A Discord message with the poster when a show or collection is complete: the last missing episode or film turned up. Without a public server address the poster is uploaded from the server. On by default; switch it off with "Celebrate completed shows and collections".'
 $repo = 'TNT24/jellyfin-completionist'
 $project = Join-Path $PSScriptRoot 'Jellyfin.Plugin.Completionist'
 $tests = Join-Path $PSScriptRoot 'tests\Jellyfin.Plugin.Completionist.Tests'

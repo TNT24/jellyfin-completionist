@@ -23,6 +23,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Gets or sets a value indicating whether Discord is also told when missing episodes or films turn up.</summary>
     public bool NotifyResolved { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether Discord gets a message with the poster when a show or collection has nothing missing any more.</summary>
+    public bool NotifyCompleted { get; set; } = true;
+
     /// <summary>Gets or sets a value indicating whether Discord is told when a check finds nothing new missing.</summary>
     public bool NotifyNothingNew { get; set; }
 

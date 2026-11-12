@@ -48,28 +48,64 @@ public sealed class DiscordNotifier
             throw new ArgumentException("That isn't a Discord webhook URL. It should start with https://discord.com/api/webhooks/");
         }
 
-        var client = _httpClientFactory.CreateClient(NamedClient.Default);
         foreach (var message in messages)
         {
             var body = message.ToJsonString();
-            for (var attempt = 0; ; attempt++)
+            await PostAsync(webhookUrl, () => new StringContent(body, Encoding.UTF8, "application/json"), cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Posts one message with an image file attached, which the message can show as <c>attachment://name</c>.</summary>
+    /// <param name="webhookUrl">The webhook URL.</param>
+    /// <param name="message">The payload.</param>
+    /// <param name="image">The image bytes.</param>
+    /// <param name="fileName">The name to upload it under.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public async Task SendWithImageAsync(string webhookUrl, JsonObject message, byte[] image, string fileName, CancellationToken cancellationToken)
+    {
+        if (!IsWebhookUrl(webhookUrl))
+        {
+            throw new ArgumentException("That isn't a Discord webhook URL. It should start with https://discord.com/api/webhooks/");
+        }
+
+        var body = message.ToJsonString();
+        await PostAsync(
+            webhookUrl,
+            () =>
             {
-                using var content = new StringContent(body, Encoding.UTF8, "application/json");
-                using var response = await client.PostAsync(webhookUrl.Trim(), content, cancellationToken).ConfigureAwait(false);
-                if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < 3)
+                var form = new MultipartFormDataContent
                 {
-                    await Task.Delay(await RetryAfterAsync(response, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
-                    continue;
-                }
+                    { new StringContent(body, Encoding.UTF8, "application/json"), "payload_json" },
+                };
+                var file = new ByteArrayContent(image);
+                file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ImageType(fileName));
+                form.Add(file, "files[0]", fileName);
+                return form;
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                    throw new HttpRequestException($"Discord answered {(int)response.StatusCode}: {Truncate(error, 300)}", null, response.StatusCode);
-                }
-
-                break;
+    private async Task PostAsync(string webhookUrl, Func<HttpContent> makeContent, CancellationToken cancellationToken)
+    {
+        var client = _httpClientFactory.CreateClient(NamedClient.Default);
+        for (var attempt = 0; ; attempt++)
+        {
+            using var content = makeContent();
+            using var response = await client.PostAsync(webhookUrl.Trim(), content, cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests && attempt < 3)
+            {
+                await Task.Delay(await RetryAfterAsync(response, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                continue;
             }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                throw new HttpRequestException($"Discord answered {(int)response.StatusCode}: {Truncate(error, 300)}", null, response.StatusCode);
+            }
+
+            break;
         }
     }
 
@@ -94,6 +130,14 @@ public sealed class DiscordNotifier
 
         return TimeSpan.FromSeconds(5);
     }
+
+    private static string ImageType(string fileName) => System.IO.Path.GetExtension(fileName).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        ".gif" => "image/gif",
+        _ => "image/jpeg",
+    };
 
     private static string Truncate(string text, int length) => text.Length <= length ? text : text[..length] + "…";
 }

@@ -178,6 +178,18 @@ public class NewItemTests
         var resolved = CompletionistScanner.FindResolved(previous, current, [Show]);
 
         Assert.Equal(new[] { "Season 4", "S01E02" }, resolved.Single().Labels);
+        Assert.False(resolved.Single().Completed);
+    }
+
+    [Fact]
+    public void ShowWithNothingLeftIsCompleted()
+    {
+        var previous = new ScanReport { Series = [Report([], [(1, 2)], First)] };
+
+        var resolved = CompletionistScanner.FindResolved(previous, new ScanReport(), [Show]).Single();
+
+        Assert.True(resolved.Completed);
+        Assert.False(resolved.IsCollection);
     }
 
     [Fact]
@@ -520,6 +532,36 @@ public class WeeklySummaryTests
         var id = report.Series[0].SeriesId;
         var still = Description(DiscordMessageBuilder.BuildWeeklySummary(report, Now, "https://jf.example.com/"), 1);
         Assert.Contains($"[**Old Show (2001)**](https://jf.example.com/web/#/details?id={id:N})", still);
+    }
+
+    [Fact]
+    public void Completed_ShowsPosterFromServer()
+    {
+        var id = Guid.NewGuid();
+        var msg = DiscordMessageBuilder.BuildCompleted(new ResolvedChange(id, "Show", ["S01E02"], true), "https://jf.example.com/", null);
+        var embed = msg["embeds"]![0]!;
+
+        Assert.Equal($"https://jf.example.com/Items/{id:N}/Images/Primary?maxHeight=600", embed["image"]!["url"]!.GetValue<string>());
+        Assert.Contains("every aired episode", embed["description"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Completed_UsesUploadedPosterWithoutServerAddress()
+    {
+        var msg = DiscordMessageBuilder.BuildCompleted(new ResolvedChange(Guid.NewGuid(), "Films", ["A", "B"], true, true), string.Empty, "poster.png");
+        var embed = msg["embeds"]![0]!;
+
+        Assert.Equal("attachment://poster.png", embed["image"]!["url"]!.GetValue<string>());
+        Assert.Null(embed["url"]);
+        Assert.Contains("every released film", embed["description"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Completed_NoPosterAtAll()
+    {
+        var embed = DiscordMessageBuilder.BuildCompleted(new ResolvedChange(null, "Show", ["S01E02"], true), string.Empty, null)["embeds"]![0]!;
+
+        Assert.Null(embed["image"]);
     }
 
     [Fact]

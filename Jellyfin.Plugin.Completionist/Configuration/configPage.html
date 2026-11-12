@@ -143,6 +143,13 @@
                         </div>
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
+                                <input id="NotifyCompleted" type="checkbox" is="emby-checkbox" />
+                                <span>Celebrate completed shows and collections</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">A message with the poster when the last missing episode or film of a show or collection turns up.</div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
                                 <input id="NotifyNothingNew" type="checkbox" is="emby-checkbox" />
                                 <span>Also post when a check finds nothing new</span>
                             </label>
@@ -263,7 +270,7 @@
                 var pluginId = 'aceeaf3d-1c56-410f-af3b-0f4f8fa40746';
                 var page = document.querySelector('#CompletionistConfigPage');
                 var textFields = ['DiscordWebhookUrl', 'PublicServerUrl', 'TmdbApiKey', 'GraceDays', 'FilmGraceDays'];
-                var boolFields = ['NotifyResolved', 'NotifyNothingNew', 'WeeklySummary','CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
+                var boolFields = ['NotifyResolved', 'NotifyCompleted', 'NotifyNothingNew', 'WeeklySummary','CheckShows', 'ReportWholeSeasons', 'IncludeSpecials', 'CheckGapsWithoutGuide', 'CheckFilmCollections', 'CheckOnLibraryScan'];
                 var NEW_DAYS = 7;
                 var report = null;
                 var config = null;
